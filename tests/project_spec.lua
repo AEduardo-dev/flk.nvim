@@ -26,4 +26,29 @@ return {
     h.falsy(project.is_valid_profile(nil))
     h.falsy(project.is_valid_profile(42))
   end,
+
+  ["find_root finds .flk in the starting directory"] = function()
+    local dir = h.tmpdir()
+    vim.fn.mkdir(dir .. "/.flk", "p")
+    h.eq(project.find_root(dir), vim.fn.resolve(dir))
+  end,
+
+  ["find_root walks upward"] = function()
+    local dir = h.tmpdir()
+    vim.fn.mkdir(dir .. "/.flk", "p")
+    vim.fn.mkdir(dir .. "/src/deep", "p")
+    h.eq(project.find_root(dir .. "/src/deep"), vim.fn.resolve(dir))
+  end,
+
+  ["find_root returns nil outside a project"] = function()
+    local dir = h.tmpdir()
+    vim.fn.mkdir(dir .. "/src", "p")
+    h.falsy(project.find_root(dir .. "/src"))
+  end,
+
+  ["find_root ignores a .flk file that is not a directory"] = function()
+    local dir = h.tmpdir()
+    h.write(dir .. "/.flk", "not a directory")
+    h.falsy(project.find_root(dir))
+  end,
 }

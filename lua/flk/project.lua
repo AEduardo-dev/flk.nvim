@@ -14,4 +14,22 @@ function M.is_valid_profile(name)
   return type(name) == "string" and name:match(VALID_PROFILE) ~= nil
 end
 
+---Find the flk project root by walking up from `start` looking for `.flk/`.
+---@param start? string Directory to start from (default: the cwd)
+---@return string? root Absolute, symlink-resolved path, or nil if not found
+function M.find_root(start)
+  local from = start or vim.fn.getcwd()
+  local found = vim.fs.find(".flk", {
+    path = from,
+    upward = true,
+    type = "directory",
+  })[1]
+
+  if not found then
+    return nil
+  end
+
+  return vim.fn.resolve(vim.fs.dirname(found))
+end
+
 return M
