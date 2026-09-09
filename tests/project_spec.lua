@@ -51,4 +51,54 @@ return {
     h.write(dir .. "/.flk", "not a directory")
     h.falsy(project.find_root(dir))
   end,
+
+  ["default_profile reads defaultProfile from config.nix"] = function()
+    local dir = h.tmpdir()
+    h.write(
+      dir .. "/.flk/config.nix",
+      '{\n  defaultProfile = "rust";\n  maxCombinations = 3;\n}\n'
+    )
+    h.eq(project.default_profile(dir), "rust")
+  end,
+
+  ["default_profile tolerates loose formatting"] = function()
+    local dir = h.tmpdir()
+    h.write(dir .. "/.flk/config.nix", '{ defaultProfile="docs-rust" ; }')
+    h.eq(project.default_profile(dir), "docs-rust")
+  end,
+
+  ["default_profile returns nil when unset"] = function()
+    local dir = h.tmpdir()
+    h.write(dir .. "/.flk/config.nix", "{\n  maxCombinations = 3;\n}\n")
+    h.falsy(project.default_profile(dir))
+  end,
+
+  ["default_profile returns nil when config.nix is absent"] = function()
+    local dir = h.tmpdir()
+    vim.fn.mkdir(dir .. "/.flk", "p")
+    h.falsy(project.default_profile(dir))
+  end,
+
+  ["default_profile rejects an invalid name in config"] = function()
+    local dir = h.tmpdir()
+    h.write(dir .. "/.flk/config.nix", '{ defaultProfile = "../evil"; }')
+    h.falsy(project.default_profile(dir))
+  end,
+
+  ["profile_files lists profile names without the extension"] = function()
+    local dir = h.tmpdir()
+    h.write(dir .. "/.flk/profiles/rust.nix", "{}")
+    h.write(dir .. "/.flk/profiles/docs.nix", "{}")
+    h.write(dir .. "/.flk/profiles/README.md", "ignored")
+    local names = project.profile_files(dir)
+    table.sort(names)
+    h.same(names, { "docs", "rust" })
+  end,
+
+  ["profile_files returns an empty list when there is no profiles dir"] =
+    function()
+      local dir = h.tmpdir()
+      vim.fn.mkdir(dir .. "/.flk", "p")
+      h.same(project.profile_files(dir), {})
+    end,
 }
