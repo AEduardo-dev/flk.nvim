@@ -182,8 +182,12 @@ optional integration test, skipped unless a real flk project is present.
 - **Neovim 0.10+**, for `vim.system()`.
 - `defaultProfile` is read from `.flk/config.nix` with a Lua pattern rather than
   a nix eval. The file is flk-generated and simple (`defaultProfile = "rust";`).
-  A hand-edited config with unusual formatting would defeat the pattern; the
-  fallback is `nix eval --raw .#defaultShell.<system>`, at the cost of a slow path.
+  A hand-edited config with unusual formatting would defeat the pattern. There is
+  deliberately **no** `nix eval --raw .#defaultShell.<system>` fallback: profile
+  resolution is synchronous, and making it async to cover a hand-edited config
+  would complicate every activation. Instead the failure is an actionable error
+  naming the profiles found in `.flk/profiles/`, so the user can pass one
+  explicitly. Revisit if hand-edited configs turn out to be common.
 
 ## Out of scope
 
