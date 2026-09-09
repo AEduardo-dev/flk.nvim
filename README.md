@@ -46,6 +46,64 @@ The `flk` binary itself is not required: the plugin reads `.flk/` and drives
 nix directly, which matters because Neovim usually starts outside the flk
 shell.
 
+## Installation
+
+### Nix (flake)
+
+This repository is a flake. It exposes `packages.<system>.flk-nvim` and an
+overlay that adds `pkgs.vimPlugins.flk-nvim`.
+
+```nix
+# flake.nix
+inputs.flk-nvim.url = "gitlab:pixel-racks/flk-nvim";
+```
+
+With the overlay applied, config modules need no flake plumbing:
+
+```nix
+pkgs = import nixpkgs {
+  inherit system;
+  overlays = [flk-nvim.overlays.default];
+};
+```
+
+### nixvim
+
+```nix
+{pkgs, ...}: {
+  extraPlugins = [pkgs.vimPlugins.flk-nvim];
+
+  keymaps = [
+    {
+      key = "<leader>na";
+      action = "<cmd>Flk<cr>";
+      options.desc = "flk: activate default profile (or refresh)";
+    }
+    {
+      # No <cr>: leaves the command line open so <Tab> completes profiles.
+      key = "<leader>np";
+      action = ":Flk ";
+      options.desc = "flk: pick a profile";
+    }
+    {
+      key = "<leader>nd";
+      action = "<cmd>FlkOff<cr>";
+      options.desc = "flk: restore the pre-activation environment";
+    }
+  ];
+}
+```
+
+Do not add `nix` to `extraPackages`. The plugin resolves `nix` from `PATH` at
+runtime so the CLI matches your running daemon; bundling a second one from
+nixpkgs invites client/daemon version skew. If Neovim is launched from a GUI
+with a narrower `PATH` than your shell, `:Flk` reports that plainly rather
+than failing obscurely.
+
+### Other plugin managers
+
+Point them at this repository; there is no build step and no setup call.
+
 ## Configuration
 
 Variables never imported from the dev shell:
