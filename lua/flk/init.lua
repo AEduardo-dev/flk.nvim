@@ -251,4 +251,92 @@ function M.status()
   return env.active_profile()
 end
 
+-- Completion candidates for this session. Seeded from the profiles directory,
+-- then replaced by the flake's devShells once nix has answered.
+local profiles = nil
+local profiles_pending = false
+
+---Replace the cached completion candidates. Tests and the nix callback.
+---@param names string[]
+---@private
+function M._set_profiles(names)
+  profiles = vim.deepcopy(names)
+  table.sort(profiles)
+end
+
+---Nix's name for the current system, e.g. "x86_64-linux" or "aarch64-darwin".
+---@return string
+local function nix_system()
+  local uname = vim.uv.os_uname()
+
+  -- Darwin reports "arm64"; nix calls it "aarch64".
+  local arch = uname.machine == "arm64" and "aarch64" or uname.machine
+
+  return arch .. "-" .. uname.sysname:lower()
+end
+
+---Ask nix for the flake's devShell names, including generated combinations.
+---@param root string
+local function refresh_profiles(root)
+  if profiles_pending then
+    return
+  end
+  profiles_pending = true
+
+  vim.system({
+    "nix",
+    "eval",
+    "--extra-experimental-features",
+    "nix-command flakes",
+    "--impure",
+    "--json",
+    string.format(".#devShells.%s", nix_system()),
+    "--apply",
+    "builtins.attrNames",
+  }, { cwd = root, text = true }, function(result)
+    profiles_pending = false
+    if result.code ~= 0 then
+      return
+    end
+
+    local ok, names = pcall(vim.json.decode, result.stdout or "")
+    if ok and type(names) == "table" and #names > 0 then
+      vim.schedule(function()
+        M._set_profiles(names)
+      end)
+    end
+  end)
+end
+
+---Completion candidates for `:Flk`.
+---@param prefix string
+---@return string[]
+---@usage `require("flk").complete("do")`
+function M.complete(prefix)
+  if not profiles then
+    local root = project.find_root()
+    if not root then
+      return {}
+    end
+    M._set_profiles(project.profile_files(root))
+    refresh_profiles(root)
+  end
+
+  local matches = {}
+  for _, name in ipairs(profiles) do
+    if vim.startswith(name, prefix) then
+      table.insert(matches, name)
+    end
+  end
+
+  return matches
+end
+
+---All known profile names.
+---@return string[]
+---@usage `require("flk").profiles()`
+function M.profiles()
+  return M.complete("")
+end
+
 return M

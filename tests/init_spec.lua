@@ -93,4 +93,26 @@ return {
     h.write(dir .. "/.flk/config.nix", '{ defaultProfile = "rust"; }')
     h.falsy(flk._resolve_profile(dir, "../evil"))
   end,
+
+  ["complete filters the candidate list by prefix"] = function()
+    flk._set_profiles({ "default", "docs", "docs-rust", "rust" })
+    h.same(flk.complete("do"), { "docs", "docs-rust" })
+    h.same(flk.complete("r"), { "rust" })
+  end,
+
+  ["complete with an empty prefix returns everything"] = function()
+    flk._set_profiles({ "docs", "rust" })
+    h.same(flk.complete(""), { "docs", "rust" })
+  end,
+
+  ["complete returns a sorted list"] = function()
+    flk._set_profiles({ "rust", "docs", "default" })
+    h.same(flk.complete(""), { "default", "docs", "rust" })
+  end,
+
+  ["complete escapes prefix characters that are magic in Lua patterns"] =
+    function()
+      flk._set_profiles({ "docs", "rust" })
+      h.same(flk.complete("-"), {})
+    end,
 }
