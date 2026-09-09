@@ -97,4 +97,58 @@ return {
 
     h.ok(cache.is_fresh(dir, "rust"))
   end,
+
+  ["is_fresh is true when input is older than stamp (same second, nsec)"] = function()
+    -- Sub-second mtime precision decides staleness when a profile input is
+    -- edited within the same second as the cache stamp. This branch must
+    -- work correctly or the user gets a stale environment.
+    local dir = h.tmpdir()
+    h.write(dir .. "/flake.nix", "{}")
+    h.write(dir .. "/flake.lock", "{}")
+    h.write(dir .. "/.flk/config.nix", "{}")
+    h.write(dir .. "/.flk/pins.nix", "{}")
+    h.write(dir .. "/.flk/profiles/rust.nix", "{}")
+    h.write(dir .. "/.flk/.nix-profile-rust", "")
+    h.write(dir .. "/.flk/.nix-profile-rust.stamp", "")
+
+    for _, path in ipairs(cache.inputs(dir, "rust")) do
+      h.set_mtime(path, 1000.25)
+    end
+    h.set_mtime(dir .. "/.flk/.nix-profile-rust.stamp", 1000.75)
+
+    -- Guard against filesystems without sub-second precision.
+    local stat = vim.uv.fs_stat(dir .. "/flake.nix")
+    if stat.mtime.nsec == 0 then
+      return
+    end
+
+    h.ok(cache.is_fresh(dir, "rust"))
+  end,
+
+  ["is_fresh is false when input is newer than stamp (same second, nsec)"] = function()
+    -- Sub-second mtime precision decides staleness when a profile input is
+    -- edited within the same second as the cache stamp. This branch must
+    -- work correctly or the user gets a stale environment.
+    local dir = h.tmpdir()
+    h.write(dir .. "/flake.nix", "{}")
+    h.write(dir .. "/flake.lock", "{}")
+    h.write(dir .. "/.flk/config.nix", "{}")
+    h.write(dir .. "/.flk/pins.nix", "{}")
+    h.write(dir .. "/.flk/profiles/rust.nix", "{}")
+    h.write(dir .. "/.flk/.nix-profile-rust", "")
+    h.write(dir .. "/.flk/.nix-profile-rust.stamp", "")
+
+    for _, path in ipairs(cache.inputs(dir, "rust")) do
+      h.set_mtime(path, 1000.75)
+    end
+    h.set_mtime(dir .. "/.flk/.nix-profile-rust.stamp", 1000.25)
+
+    -- Guard against filesystems without sub-second precision.
+    local stat = vim.uv.fs_stat(dir .. "/flake.nix")
+    if stat.mtime.nsec == 0 then
+      return
+    end
+
+    h.falsy(cache.is_fresh(dir, "rust"))
+  end,
 }
