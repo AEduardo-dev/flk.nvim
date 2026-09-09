@@ -78,6 +78,20 @@ function M.baseline_path()
   return ensure_baseline().PATH or ""
 end
 
+---A copy of the environment as it stood before any activation.
+---
+---Nix must always be spawned from this pre-activation snapshot, not from
+---Neovim's current environment: `vim.system`'s `env` option merges over the
+---inherited environment rather than replacing it, so spawning from the
+---current environment would leak the previously-activated profile's
+---variables into the child, which would then report them back as if they
+---belonged to the profile being entered. Returned as a copy so callers
+---cannot mutate the stored baseline.
+---@return table<string, string>
+function M.baseline_env()
+  return vim.deepcopy(ensure_baseline())
+end
+
 ---The active profile name, or nil.
 ---@return string?
 function M.active_profile()

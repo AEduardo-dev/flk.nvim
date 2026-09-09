@@ -182,7 +182,6 @@ function M.activate(requested)
   end
 
   local fresh = cache.is_fresh(root, profile)
-  local baseline_path = env.baseline_path()
 
   notify(
     string.format(
@@ -192,17 +191,20 @@ function M.activate(requested)
     )
   )
 
+  local child_env = env.baseline_env()
+  child_env.FLK_ORIG_PATH = child_env.PATH
+
   running = true
   vim.system(M._command(root, profile, fresh), {
     cwd = root,
     text = true,
-    -- Merged over Neovim's environment. Forcing PATH back to the baseline is
-    -- what keeps a switch from layering onto the previous profile; see
-    -- flk src/commands/hook.rs.
-    env = {
-      PATH = baseline_path,
-      FLK_ORIG_PATH = baseline_path,
-    },
+    -- vim.system's `env` merges over the inherited environment rather than
+    -- replacing it, so without clear_env the child would inherit the active
+    -- profile's variables and report them back as if they belonged to the
+    -- profile being entered. Spawning from the baseline with clear_env
+    -- ensures the child gets exactly the pre-activation environment.
+    env = child_env,
+    clear_env = true,
   }, function(result)
     running = false
 

@@ -138,4 +138,32 @@ return {
     env.deactivate()
     h.falsy(env.active_profile())
   end,
+
+  ["baseline_env reports the pre-activation environment"] = function()
+    env.reset()
+    vim.uv.os_setenv("FLK_TEST_MARKER", "before")
+
+    h.eq(env.baseline_env().FLK_TEST_MARKER, "before")
+    env.activate({ FLK_TEST_MARKER = "after" }, {}, "rust")
+    h.eq(
+      env.baseline_env().FLK_TEST_MARKER,
+      "before",
+      "baseline must not drift after activation"
+    )
+
+    env.deactivate()
+    h.eq(vim.uv.os_getenv("FLK_TEST_MARKER"), "before")
+  end,
+
+  ["baseline_env returns a copy"] = function()
+    env.reset()
+    vim.uv.os_setenv("FLK_TEST_MARKER", "original")
+
+    local first = env.baseline_env()
+    first.FLK_TEST_MARKER = "mutated"
+
+    h.eq(env.baseline_env().FLK_TEST_MARKER, "original")
+
+    env.deactivate()
+  end,
 }
