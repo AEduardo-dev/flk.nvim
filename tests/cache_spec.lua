@@ -31,4 +31,70 @@ return {
       dir .. "/.flk/profiles/rust.nix",
     })
   end,
+
+  ["is_fresh is false without a cached profile"] = function()
+    local dir = h.tmpdir()
+    h.write(dir .. "/.flk/config.nix", "{}")
+    h.falsy(cache.is_fresh(dir, "rust"))
+  end,
+
+  ["is_fresh is false without a stamp"] = function()
+    local dir = h.tmpdir()
+    h.write(dir .. "/.flk/config.nix", "{}")
+    h.write(dir .. "/.flk/.nix-profile-rust", "")
+    h.falsy(cache.is_fresh(dir, "rust"))
+  end,
+
+  ["is_fresh is true when every input predates the stamp"] = function()
+    local dir = h.tmpdir()
+    h.write(dir .. "/flake.nix", "{}")
+    h.write(dir .. "/flake.lock", "{}")
+    h.write(dir .. "/.flk/config.nix", "{}")
+    h.write(dir .. "/.flk/pins.nix", "{}")
+    h.write(dir .. "/.flk/profiles/rust.nix", "{}")
+    h.write(dir .. "/.flk/.nix-profile-rust", "")
+    h.write(dir .. "/.flk/.nix-profile-rust.stamp", "")
+
+    for _, path in ipairs(cache.inputs(dir, "rust")) do
+      h.set_mtime(path, 1000)
+    end
+    h.set_mtime(dir .. "/.flk/.nix-profile-rust.stamp", 2000)
+
+    h.ok(cache.is_fresh(dir, "rust"))
+  end,
+
+  ["is_fresh is false when an input is newer than the stamp"] = function()
+    local dir = h.tmpdir()
+    h.write(dir .. "/flake.nix", "{}")
+    h.write(dir .. "/flake.lock", "{}")
+    h.write(dir .. "/.flk/config.nix", "{}")
+    h.write(dir .. "/.flk/pins.nix", "{}")
+    h.write(dir .. "/.flk/profiles/rust.nix", "{}")
+    h.write(dir .. "/.flk/.nix-profile-rust", "")
+    h.write(dir .. "/.flk/.nix-profile-rust.stamp", "")
+
+    for _, path in ipairs(cache.inputs(dir, "rust")) do
+      h.set_mtime(path, 1000)
+    end
+    h.set_mtime(dir .. "/.flk/.nix-profile-rust.stamp", 2000)
+    h.set_mtime(dir .. "/.flk/profiles/rust.nix", 3000)
+
+    h.falsy(cache.is_fresh(dir, "rust"))
+  end,
+
+  ["is_fresh ignores inputs that do not exist"] = function()
+    -- The legacy input set names files a slim project never has; a missing
+    -- input must not be read as "changed".
+    local dir = h.tmpdir()
+    h.write(dir .. "/flake.nix", "{}")
+    h.write(dir .. "/.flk/config.nix", "{}")
+    h.write(dir .. "/.flk/.nix-profile-rust", "")
+    h.write(dir .. "/.flk/.nix-profile-rust.stamp", "")
+
+    h.set_mtime(dir .. "/flake.nix", 1000)
+    h.set_mtime(dir .. "/.flk/config.nix", 1000)
+    h.set_mtime(dir .. "/.flk/.nix-profile-rust.stamp", 2000)
+
+    h.ok(cache.is_fresh(dir, "rust"))
+  end,
 }

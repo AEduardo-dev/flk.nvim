@@ -55,4 +55,45 @@ function M.inputs(root, profile)
   return paths
 end
 
+---Is `a` strictly newer than `b`? Both are `vim.uv` stat tables.
+---@param a table
+---@param b table
+---@return boolean
+local function newer_than(a, b)
+  if a.mtime.sec ~= b.mtime.sec then
+    return a.mtime.sec > b.mtime.sec
+  end
+  return (a.mtime.nsec or 0) > (b.mtime.nsec or 0)
+end
+
+---Can the cached profile be reused as-is?
+---
+---False whenever the cached profile or its stamp is missing, or any watched
+---input is newer than the stamp. Inputs that do not exist are skipped,
+---matching flk's `[ -e "$f" ] || continue`.
+---@param root string
+---@param profile string
+---@return boolean
+function M.is_fresh(root, profile)
+  -- fs_stat follows symlinks, so a dangling profile link reads as absent —
+  -- the same as flk's `[ -e ]` test.
+  if not vim.uv.fs_stat(M.profile_path(root, profile)) then
+    return false
+  end
+
+  local stamp = vim.uv.fs_stat(M.stamp_path(root, profile))
+  if not stamp then
+    return false
+  end
+
+  for _, path in ipairs(M.inputs(root, profile)) do
+    local stat = vim.uv.fs_stat(path)
+    if stat and newer_than(stat, stamp) then
+      return false
+    end
+  end
+
+  return true
+end
+
 return M
