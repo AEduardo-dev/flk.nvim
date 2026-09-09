@@ -29,4 +29,31 @@ return {
   ["parse returns an empty table for empty input"] = function()
     h.same(env.parse(""), {})
   end,
+
+  ["diff reports new variables"] = function()
+    h.same(env.diff({ A = "1" }, { A = "1", B = "2" }, {}), { B = "2" })
+  end,
+
+  ["diff reports changed variables"] = function()
+    h.same(env.diff({ PATH = "/usr/bin" }, { PATH = "/nix/bin:/usr/bin" }, {}), {
+      PATH = "/nix/bin:/usr/bin",
+    })
+  end,
+
+  ["diff skips unchanged variables"] = function()
+    h.same(env.diff({ A = "1" }, { A = "1" }, {}), {})
+  end,
+
+  ["diff honours the ignore list"] = function()
+    -- SHELL from a nix shell points at non-interactive bash in the store and
+    -- would break :terminal if it leaked into Neovim.
+    h.same(env.diff({ SHELL = "/bin/zsh" }, { SHELL = "/nix/store/x/bash", A = "1" }, {
+      SHELL = true,
+    }), { A = "1" })
+  end,
+
+  ["diff does not report variables missing from the new env"] = function()
+    -- Neovim's own variables must survive activation.
+    h.same(env.diff({ NVIM_LOG_FILE = "/tmp/log" }, { A = "1" }, {}), { A = "1" })
+  end,
 }

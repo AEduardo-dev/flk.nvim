@@ -21,4 +21,25 @@ function M.parse(output)
   return vars
 end
 
+---What `new` changes relative to `current`, ignoring names in `ignored`.
+---
+---Variables present in `current` but absent from `new` are left alone: the dev
+---shell inherits Neovim's environment, so an absence means "nix did not touch
+---it", never "nix removed it".
+---@param current table<string, string>
+---@param new table<string, string>
+---@param ignored table<string, boolean>
+---@return table<string, string>
+function M.diff(current, new, ignored)
+  local changes = {}
+
+  for name, value in pairs(new) do
+    if not ignored[name] and current[name] ~= value then
+      changes[name] = value
+    end
+  end
+
+  return changes
+end
+
 return M
