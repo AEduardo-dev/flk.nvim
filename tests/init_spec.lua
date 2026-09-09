@@ -39,4 +39,58 @@ return {
     h.ok(flk.ignored_variables.HOME)
     h.ok(flk.ignored_variables.TERM)
   end,
+
+  ["resolve_profile prefers the explicit argument"] = function()
+    local dir = h.tmpdir()
+    h.write(dir .. "/.flk/config.nix", '{ defaultProfile = "rust"; }')
+    h.eq(flk._resolve_profile(dir, "docs"), "docs")
+  end,
+
+  ["resolve_profile falls back to the active profile"] = function()
+    local dir = h.tmpdir()
+    h.write(dir .. "/.flk/config.nix", '{ defaultProfile = "rust"; }')
+
+    local env = require("flk.env")
+    env.reset()
+    env.activate({ FLK_TEST_REFRESH = "1" }, {}, "docs")
+
+    h.eq(flk._resolve_profile(dir, nil), "docs", "no argument should refresh the active profile")
+
+    env.deactivate()
+  end,
+
+  ["resolve_profile falls back to the configured default"] = function()
+    local dir = h.tmpdir()
+    h.write(dir .. "/.flk/config.nix", '{ defaultProfile = "rust"; }')
+    require("flk.env").reset()
+    h.eq(flk._resolve_profile(dir, nil), "rust")
+  end,
+
+  ["resolve_profile returns nil with no argument, no active profile and no default"] = function()
+    local dir = h.tmpdir()
+    h.write(dir .. "/.flk/config.nix", "{ }")
+    require("flk.env").reset()
+    h.falsy(flk._resolve_profile(dir, nil))
+  end,
+
+  ["available_profiles lists what the project offers"] = function()
+    -- Used to make the "no default profile" error actionable rather than a
+    -- dead end. Reads the filesystem only, so it works before nix has answered.
+    local dir = h.tmpdir()
+    h.write(dir .. "/.flk/profiles/rust.nix", "{}")
+    h.write(dir .. "/.flk/profiles/docs.nix", "{}")
+    h.eq(flk._available_profiles(dir), "docs, rust")
+  end,
+
+  ["available_profiles reports none when there are no profiles"] = function()
+    local dir = h.tmpdir()
+    vim.fn.mkdir(dir .. "/.flk", "p")
+    h.eq(flk._available_profiles(dir), "none")
+  end,
+
+  ["resolve_profile rejects an invalid argument"] = function()
+    local dir = h.tmpdir()
+    h.write(dir .. "/.flk/config.nix", '{ defaultProfile = "rust"; }')
+    h.falsy(flk._resolve_profile(dir, "../evil"))
+  end,
 }
