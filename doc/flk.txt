@@ -1,0 +1,78 @@
+==============================================================================
+flk environments for Neovim                                                *flk*
+
+                                                                      *flk.nvim*
+                                                                          *:Flk*
+Enter an flk-managed development environment from inside Neovim.
+>
+:Flk
+:Flk docs
+:FlkOff
+<
+
+ignored_variables                                        *flk.ignored_variables*
+    Variables never imported from the dev shell.
+
+    `SHELL` is the important one: `nix develop` points it at nixpkgs'
+    non-interactive bash, which breaks `:terminal`. The rest describe the shell
+    that produced the environment, not the environment itself.
+    >lua
+    require("flk").ignored_variables["SHELL"] = false
+    <
+
+
+M.activate()                                                      *flk.activate*
+
+    Usage: ~
+>lua
+        require("flk").activate("docs")
+<
+
+
+M.deactivate()                                                  *flk.deactivate*
+    Restore the environment as it stood before the first activation.
+
+    Usage: ~
+>lua
+        require("flk").deactivate()
+<
+
+
+M.status()                                                          *flk.status*
+    The active profile name, or nil.
+    @return string?
+
+    Usage: ~
+>lua
+        require("flk").status()
+<
+
+
+M.complete({prefix})                                              *flk.complete*
+    Completion candidates for `:Flk`.
+
+    Parameters: ~
+        {prefix}  (string)
+
+    Returns: ~
+        (string[])
+
+    Usage: ~
+>lua
+        require("flk").complete("do")
+<
+
+
+M.profiles()                                                      *flk.profiles*
+    All known profile names.
+
+    Returns: ~
+        (string[])
+
+    Usage: ~
+>lua
+        require("flk").profiles()
+<
+
+
+vim:tw=78:ts=8:noet:ft=help:norl:
