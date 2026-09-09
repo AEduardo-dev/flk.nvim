@@ -92,6 +92,25 @@ function M.baseline_env()
   return vim.deepcopy(ensure_baseline())
 end
 
+---The environment to spawn a child process from.
+---
+---Returns the frozen baseline when a profile is already active, otherwise a
+---fresh, unmemoized snapshot of the live environment. It must not freeze a
+---baseline itself: at the point a child is first spawned (activation is not
+---yet applied), the live environment is the pre-activation environment, but
+---if that spawn fails, nothing was ever applied and no baseline should be
+---captured — the next attempt must still see whatever the live environment
+---has become (e.g. `PATH` fixed) rather than being stuck with the failure's
+---environment forever. Returned as a copy so callers cannot mutate the
+---stored baseline (once one exists).
+---@return table<string, string>
+function M.spawn_env()
+  if baseline then
+    return vim.deepcopy(baseline)
+  end
+  return vim.fn.environ()
+end
+
 ---The active profile name, or nil.
 ---@return string?
 function M.active_profile()

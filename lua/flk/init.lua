@@ -191,7 +191,7 @@ function M.activate(requested)
     )
   )
 
-  local child_env = env.baseline_env()
+  local child_env = env.spawn_env()
   child_env.FLK_ORIG_PATH = child_env.PATH
 
   running = true

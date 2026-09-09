@@ -197,4 +197,56 @@ return {
 
     env.deactivate()
   end,
+
+  ["spawn_env reflects the live environment without freezing a baseline"] = function()
+    env.reset()
+    vim.uv.os_setenv("FLK_TEST_SPAWN", "one")
+
+    h.eq(env.spawn_env().FLK_TEST_SPAWN, "one")
+
+    vim.uv.os_setenv("FLK_TEST_SPAWN", "two")
+    h.eq(
+      env.spawn_env().FLK_TEST_SPAWN,
+      "two",
+      "spawn_env must not have frozen the earlier value"
+    )
+    h.falsy(env.active_profile())
+
+    -- A later activation must capture the *then-current* value as its
+    -- baseline, not whatever spawn_env happened to see earlier.
+    env.activate({ FLK_TEST_SPAWN = "applied" }, {}, "rust")
+    env.deactivate()
+    h.eq(
+      vim.uv.os_getenv("FLK_TEST_SPAWN"),
+      "two",
+      "deactivation must restore the value at activation time"
+    )
+  end,
+
+  ["spawn_env returns the frozen baseline once a profile is active"] = function()
+    env.reset()
+    vim.uv.os_setenv("FLK_TEST_SPAWN_ACTIVE", "before")
+
+    env.activate({ FLK_TEST_SPAWN_ACTIVE = "after" }, {}, "rust")
+
+    h.eq(
+      env.spawn_env().FLK_TEST_SPAWN_ACTIVE,
+      "before",
+      "spawn_env must report the pre-activation value while a profile is active"
+    )
+
+    env.deactivate()
+  end,
+
+  ["spawn_env returns a copy"] = function()
+    env.reset()
+    vim.uv.os_setenv("FLK_TEST_SPAWN_COPY", "original")
+
+    local first = env.spawn_env()
+    first.FLK_TEST_SPAWN_COPY = "mutated"
+
+    h.eq(env.spawn_env().FLK_TEST_SPAWN_COPY, "original")
+
+    env.deactivate()
+  end,
 }
