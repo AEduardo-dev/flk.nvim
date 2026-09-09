@@ -118,4 +118,91 @@ return {
     flk._set_profiles({ "docs", "rust" })
     h.same(flk.complete("-"), {})
   end,
+
+  ["activate does not raise when the spawn fails"] = function()
+    local dir = h.tmpdir()
+    h.write(dir .. "/.flk/config.nix", '{ defaultProfile = "rust"; }')
+    h.write(dir .. "/.flk/profiles/rust.nix", "{}")
+
+    local cwd = vim.fn.getcwd()
+    local real_system = vim.system
+    vim.fn.chdir(dir)
+    vim.system = function()
+      error("ENOENT: no such file or directory (cmd): 'nix'")
+    end
+
+    local ok = pcall(function()
+      flk.activate()
+    end)
+
+    vim.system = real_system
+    vim.fn.chdir(cwd)
+
+    h.ok(ok, "activate should not raise when the spawn fails")
+  end,
+
+  ["activate recovers the running flag after a failed spawn"] = function()
+    local dir = h.tmpdir()
+    h.write(dir .. "/.flk/config.nix", '{ defaultProfile = "rust"; }')
+    h.write(dir .. "/.flk/profiles/rust.nix", "{}")
+
+    local cwd = vim.fn.getcwd()
+    local real_system = vim.system
+    local calls = 0
+    vim.fn.chdir(dir)
+    vim.system = function()
+      calls = calls + 1
+      error("ENOENT: no such file or directory (cmd): 'nix'")
+    end
+
+    local ok = pcall(function()
+      flk.activate()
+      -- If `running` were still stuck true, this second call would return
+      -- early on the "already running" check and never reach the stub.
+      flk.activate()
+    end)
+
+    vim.system = real_system
+    vim.fn.chdir(cwd)
+
+    h.ok(ok, "activate should not raise")
+    h.eq(calls, 2, "the second activate should reach the stub, not be blocked")
+  end,
+
+  ["complete does not raise when the background refresh spawn fails"] = function()
+    local dir = h.tmpdir()
+    h.write(dir .. "/.flk/config.nix", '{ defaultProfile = "rust"; }')
+    h.write(dir .. "/.flk/profiles/rust.nix", "{}")
+
+    local cwd = vim.fn.getcwd()
+    local real_system = vim.system
+    vim.fn.chdir(dir)
+
+    -- Force the cold-cache path in M.complete (profiles == nil), regardless
+    -- of what earlier tests left in the module's cached candidate list.
+    for i = 1, math.huge do
+      local name = debug.getupvalue(flk.complete, i)
+      if not name then
+        break
+      end
+      if name == "profiles" then
+        debug.setupvalue(flk.complete, i, nil)
+        break
+      end
+    end
+
+    vim.system = function()
+      error("ENOENT: no such file or directory (cmd): 'nix'")
+    end
+
+    local ok, result = pcall(function()
+      return flk.complete("")
+    end)
+
+    vim.system = real_system
+    vim.fn.chdir(cwd)
+
+    h.ok(ok, "complete should not raise when the background refresh fails")
+    h.eq(type(result), "table", "complete should still return a table")
+  end,
 }

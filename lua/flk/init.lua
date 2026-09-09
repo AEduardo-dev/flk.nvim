@@ -195,7 +195,7 @@ function M.activate(requested)
   child_env.FLK_ORIG_PATH = child_env.PATH
 
   running = true
-  vim.system(M._command(root, profile, fresh), {
+  local ok, err = pcall(vim.system, M._command(root, profile, fresh), {
     cwd = root,
     text = true,
     -- vim.system's `env` merges over the inherited environment rather than
@@ -229,6 +229,14 @@ function M.activate(requested)
       notify(string.format("entered %s", profile))
     end)
   end)
+
+  if not ok then
+    running = false
+    notify(
+      string.format("failed to run nix: %s (is nix on Neovim's PATH?)", err),
+      levels.ERROR
+    )
+  end
 end
 
 ---Restore the environment as it stood before the first activation.
@@ -283,7 +291,7 @@ local function refresh_profiles(root)
   end
   profiles_pending = true
 
-  vim.system({
+  local ok = pcall(vim.system, {
     "nix",
     "eval",
     "--extra-experimental-features",
@@ -299,13 +307,19 @@ local function refresh_profiles(root)
       return
     end
 
-    local ok, names = pcall(vim.json.decode, result.stdout or "")
-    if ok and type(names) == "table" and #names > 0 then
+    local decode_ok, names = pcall(vim.json.decode, result.stdout or "")
+    if decode_ok and type(names) == "table" and #names > 0 then
       vim.schedule(function()
         M._set_profiles(names)
       end)
     end
   end)
+
+  if not ok then
+    -- Background refresh only improves completion; a spawn failure here
+    -- (e.g. nix not on PATH) should be invisible to the user.
+    profiles_pending = false
+  end
 end
 
 ---Completion candidates for `:Flk`.
@@ -313,23 +327,31 @@ end
 ---@return string[]
 ---@usage `require("flk").complete("do")`
 function M.complete(prefix)
-  if not profiles then
-    local root = project.find_root()
-    if not root then
-      return {}
+  local ok, result = pcall(function()
+    if not profiles then
+      local root = project.find_root()
+      if not root then
+        return {}
+      end
+      M._set_profiles(project.profile_files(root))
+      refresh_profiles(root)
     end
-    M._set_profiles(project.profile_files(root))
-    refresh_profiles(root)
+
+    local matches = {}
+    for _, name in ipairs(profiles) do
+      if vim.startswith(name, prefix) then
+        table.insert(matches, name)
+      end
+    end
+
+    return matches
+  end)
+
+  if not ok then
+    return {}
   end
 
-  local matches = {}
-  for _, name in ipairs(profiles) do
-    if vim.startswith(name, prefix) then
-      table.insert(matches, name)
-    end
-  end
-
-  return matches
+  return result
 end
 
 ---All known profile names.
