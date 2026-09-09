@@ -95,10 +95,19 @@ Profile resolution, in order:
 The name is validated against `^[a-zA-Z0-9_-]+$` — matching flk's
 `_flk_valid_profile` — before it reaches a shell.
 
-Then, mirroring `flk/src/commands/hook.rs:79-81`: set `FLK_ORIG_PATH` to the
-current PATH if unset, and spawn nix with `PATH` forced to that baseline. This
-is what makes `:Flk rust` -> `:Flk docs` drop rust's store paths instead of
-shadowing them.
+Then, going further than `flk/src/commands/hook.rs:79-81`: spawn nix with the
+**entire baseline environment** (`clear_env`), not merely `PATH` reset to it,
+and set `FLK_ORIG_PATH` alongside.
+
+Resetting only `PATH` is not enough, and this was found by testing a real
+switch rather than by reasoning. `vim.system`'s `env` option *merges over* the
+inherited environment, so the dev shell inherits Neovim's environment as it
+currently stands — including everything the active profile applied.
+`nix develop … -c env -0` then dumps those leftovers as though they belonged to
+the profile being entered, and the diff keeps them. Entering `rust` (which sets
+`RUST_BACKTRACE=1`) and switching to `docs` (which does not define it) left
+`RUST_BACKTRACE=1` set. Capturing from the pre-activation baseline makes each
+profile's environment independent of whatever preceded it.
 
 - **Cache fresh:** `nix develop <cache-path> -c env -0`
 - **Cache stale:** `nix develop .#<profile> --impure --profile <cache-path> -c env -0`, then touch the stamp
