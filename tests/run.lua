@@ -18,7 +18,10 @@ for _, file in ipairs(files) do
       io.write(".")
     else
       io.write("F")
-      table.insert(failures, string.format("%s :: %s\n    %s", file, name, tostring(err)))
+      table.insert(
+        failures,
+        string.format("%s :: %s\n    %s", file, name, tostring(err))
+      )
     end
   end
 end

@@ -7,11 +7,17 @@ return {
   end,
 
   ["parse keeps values containing equals signs"] = function()
-    h.same(env.parse("URL=postgres://h/d?x=1\0"), { URL = "postgres://h/d?x=1" })
+    h.same(
+      env.parse("URL=postgres://h/d?x=1\0"),
+      { URL = "postgres://h/d?x=1" }
+    )
   end,
 
   ["parse keeps values containing newlines"] = function()
-    h.same(env.parse("HOOK=line1\nline2\0X=1\0"), { HOOK = "line1\nline2", X = "1" })
+    h.same(
+      env.parse("HOOK=line1\nline2\0X=1\0"),
+      { HOOK = "line1\nline2", X = "1" }
+    )
   end,
 
   ["parse keeps empty values"] = function()
@@ -35,9 +41,12 @@ return {
   end,
 
   ["diff reports changed variables"] = function()
-    h.same(env.diff({ PATH = "/usr/bin" }, { PATH = "/nix/bin:/usr/bin" }, {}), {
-      PATH = "/nix/bin:/usr/bin",
-    })
+    h.same(
+      env.diff({ PATH = "/usr/bin" }, { PATH = "/nix/bin:/usr/bin" }, {}),
+      {
+        PATH = "/nix/bin:/usr/bin",
+      }
+    )
   end,
 
   ["diff skips unchanged variables"] = function()
@@ -47,14 +56,24 @@ return {
   ["diff honours the ignore list"] = function()
     -- SHELL from a nix shell points at non-interactive bash in the store and
     -- would break :terminal if it leaked into Neovim.
-    h.same(env.diff({ SHELL = "/bin/zsh" }, { SHELL = "/nix/store/x/bash", A = "1" }, {
-      SHELL = true,
-    }), { A = "1" })
+    h.same(
+      env.diff(
+        { SHELL = "/bin/zsh" },
+        { SHELL = "/nix/store/x/bash", A = "1" },
+        {
+          SHELL = true,
+        }
+      ),
+      { A = "1" }
+    )
   end,
 
   ["diff does not report variables missing from the new env"] = function()
     -- Neovim's own variables must survive activation.
-    h.same(env.diff({ NVIM_LOG_FILE = "/tmp/log" }, { A = "1" }, {}), { A = "1" })
+    h.same(
+      env.diff({ NVIM_LOG_FILE = "/tmp/log" }, { A = "1" }, {}),
+      { A = "1" }
+    )
   end,
 
   ["activate sets variables and records the profile"] = function()
@@ -62,7 +81,11 @@ return {
     vim.uv.os_setenv("FLK_TEST_ORIGINAL", "before")
     vim.uv.os_unsetenv("FLK_TEST_NEW")
 
-    env.activate({ FLK_TEST_ORIGINAL = "after", FLK_TEST_NEW = "fresh" }, {}, "rust")
+    env.activate(
+      { FLK_TEST_ORIGINAL = "after", FLK_TEST_NEW = "fresh" },
+      {},
+      "rust"
+    )
 
     h.eq(vim.uv.os_getenv("FLK_TEST_ORIGINAL"), "after")
     h.eq(vim.uv.os_getenv("FLK_TEST_NEW"), "fresh")
@@ -76,7 +99,11 @@ return {
     vim.uv.os_setenv("FLK_TEST_ORIGINAL", "before")
     vim.uv.os_unsetenv("FLK_TEST_NEW")
 
-    env.activate({ FLK_TEST_ORIGINAL = "after", FLK_TEST_NEW = "fresh" }, {}, "rust")
+    env.activate(
+      { FLK_TEST_ORIGINAL = "after", FLK_TEST_NEW = "fresh" },
+      {},
+      "rust"
+    )
     env.deactivate()
 
     h.eq(vim.uv.os_getenv("FLK_TEST_ORIGINAL"), "before")
@@ -126,7 +153,11 @@ return {
 
     h.eq(env.baseline_path(), before)
     env.activate({ PATH = "/nix/rust:" .. before }, {}, "rust")
-    h.eq(env.baseline_path(), before, "baseline must not drift after activation")
+    h.eq(
+      env.baseline_path(),
+      before,
+      "baseline must not drift after activation"
+    )
 
     env.deactivate()
     h.eq(vim.uv.os_getenv("PATH"), before)

@@ -54,7 +54,11 @@ return {
     env.reset()
     env.activate({ FLK_TEST_REFRESH = "1" }, {}, "docs")
 
-    h.eq(flk._resolve_profile(dir, nil), "docs", "no argument should refresh the active profile")
+    h.eq(
+      flk._resolve_profile(dir, nil),
+      "docs",
+      "no argument should refresh the active profile"
+    )
 
     env.deactivate()
   end,
@@ -110,9 +114,8 @@ return {
     h.same(flk.complete(""), { "default", "docs", "rust" })
   end,
 
-  ["complete escapes prefix characters that are magic in Lua patterns"] =
-    function()
-      flk._set_profiles({ "docs", "rust" })
-      h.same(flk.complete("-"), {})
-    end,
+  ["complete escapes prefix characters that are magic in Lua patterns"] = function()
+    flk._set_profiles({ "docs", "rust" })
+    h.same(flk.complete("-"), {})
+  end,
 }

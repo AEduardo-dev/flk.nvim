@@ -41,7 +41,11 @@ end
 function M.falsy(value, msg)
   if value then
     error(
-      string.format("%sexpected falsy, got %s", msg and (msg .. ": ") or "", vim.inspect(value)),
+      string.format(
+        "%sexpected falsy, got %s",
+        msg and (msg .. ": ") or "",
+        vim.inspect(value)
+      ),
       2
     )
   end

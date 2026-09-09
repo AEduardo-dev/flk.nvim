@@ -95,10 +95,9 @@ return {
     h.same(names, { "docs", "rust" })
   end,
 
-  ["profile_files returns an empty list when there is no profiles dir"] =
-    function()
-      local dir = h.tmpdir()
-      vim.fn.mkdir(dir .. "/.flk", "p")
-      h.same(project.profile_files(dir), {})
-    end,
+  ["profile_files returns an empty list when there is no profiles dir"] = function()
+    local dir = h.tmpdir()
+    vim.fn.mkdir(dir .. "/.flk", "p")
+    h.same(project.profile_files(dir), {})
+  end,
 }

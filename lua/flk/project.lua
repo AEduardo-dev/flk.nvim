@@ -80,8 +80,11 @@ function M.profile_files(root)
     if not name then
       break
     end
-    if kind ~= "directory" and name:sub(-4) == ".nix" and
-        name ~= "default.nix" then
+    if
+      kind ~= "directory"
+      and name:sub(-4) == ".nix"
+      and name ~= "default.nix"
+    then
       local profile = name:sub(1, -5)
       if M.is_valid_profile(profile) then
         table.insert(names, profile)
